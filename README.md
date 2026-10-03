@@ -23,11 +23,37 @@
 
 ## 快速开始
 
+开发（可从源码编译后后台启动）：
+
 ```bash
 git clone https://github.com/YLing2024/davbox.git
 cd davbox
+./start-dev.sh
+```
+
+生产（有源码时比对二进制，不一致则先编译；再后台启动或注册服务）：
+
+```bash
+make build
+./start-prod.sh
+```
+
+两个脚本都会询问监听地址、数据目录与认证模式（回车即用默认值），然后在后台启动，不占用当前终端。
+
+```bash
+./start-dev.sh stop       # 开发实例
+./start-prod.sh stop      # 生产实例
+./start-prod.sh status
+./start-prod.sh log
+./start-prod.sh restart
+./start-prod.sh service install    # 注册 systemd 并开机自启
+```
+
+也可以自行前台运行：
+
+```bash
 make build        # 先构建前端，再编译出单二进制 ./davbox
-./davbox          # 默认监听 127.0.0.1:18900，数据落在 ./data
+./davbox          # 默认监听 0.0.0.0:18900，数据落在 ./data
 ```
 
 首次启动（`builtin` 模式）会在数据目录生成：
@@ -46,7 +72,7 @@ make build        # 先构建前端，再编译出单二进制 ./davbox
 
 | 参数 | 默认值 | 说明 |
 |---|---|---|
-| `-addr` | `127.0.0.1:18900` | 监听地址。建议只监听回环，由 nginx 反代提供 TLS 与入口 |
+| `-addr` | `0.0.0.0:18900` | 监听地址。默认绑定所有网卡，内网设备可访问。公网入口仍建议由 nginx 反代提供 TLS |
 | `-data` | `./data` | 数据目录（账号表、管理员凭据、会话密钥、各账号目录） |
 
 Makefile 其他目标：`make frontend` 只构建前端，`make run` 编译后直接启动，`make vet` 静态检查，`make test` 跑测试，`make clean` 清理产物。
@@ -57,6 +83,8 @@ Makefile 其他目标：`make frontend` 只构建前端，`make run` 编译后�
 cmd/davbox/     程序入口
 internal/       账号、认证与会话，以及 WebDAV 和 admin/client 路由
 web/            Vite + React + TS 前端（构建产物由 go:embed 嵌入）
+start-dev.sh    开发环境启动（可编译）
+start-prod.sh   生产环境启动（只跑二进制）
 docs/           需求、选型与验收记录
 ```
 
@@ -70,8 +98,8 @@ docs/           需求、选型与验收记录
 - `sso`：不使用自带口令登录，管理端身份取自网关注入的 `X-Auth-User`；缺失或为空返回 `401 JSON`，不会回退到 cookie。仅当 davbox 只监听回环、且该请求头由网关注入并对外剥离时才可使用。
 
 ```bash
-AUTH_MODE=builtin ./davbox -addr 127.0.0.1:18900 -data ./data   # 默认，可省略
-AUTH_MODE=sso     ./davbox -addr 127.0.0.1:18900 -data ./data
+AUTH_MODE=builtin ./davbox -addr 0.0.0.0:18900 -data ./data     # 默认，可省略
+AUTH_MODE=sso     ./davbox -addr 127.0.0.1:18900 -data ./data   # sso 只绑回环
 ```
 
 两种模式都不受影响的部分：
@@ -102,8 +130,24 @@ server {
 }
 ```
 
+生产环境用 `./start-prod.sh` 拉起二进制（默认 `0.0.0.0:18900`，内网可访问）。公网入口仍建议 nginx 反代 TLS。脚本可用环境变量覆盖配置：
+
+```bash
+DAVBOX_ADDR=0.0.0.0:18900 DAVBOX_DATA=./data AUTH_MODE=builtin ./start-prod.sh
+```
+
+注册为系统服务并开机自启（需要 sudo，写入 `/etc/systemd/system/davbox.service`）：
+
+```bash
+./start-prod.sh service install
+./start-prod.sh service status
+./start-prod.sh service uninstall
+```
+
+已注册后，`./start-prod.sh start|stop|restart` 交给 systemd。首次管理员口令在 `journalctl -u davbox` 和数据目录的 `admin-password.txt`。
+
 接 `sso` 时把 `/admin`、`/api/admin/` 交给你的认证入口，WebDAV 数据面与 `/assets/*` 直连 davbox ——
-协议端点保持自带 Basic 认证，否则 App 无法同步。
+协议端点保持自带 Basic 认证，否则 App 无法同步。`start-prod.sh` 在 `AUTH_MODE=sso` 且监听不是回环时会拒绝启动。
 
 ## 已完成
 

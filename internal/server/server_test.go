@@ -137,6 +137,10 @@ func TestDAVSixVerbs(t *testing.T) {
 	if rec.Code != 207 {
 		t.Fatalf("PROPFIND Depth:0 应为 207，实际 %d", rec.Code)
 	}
+	rec = request(s, "PROPFIND", "/app1", "app1", pass, nil, map[string]string{"Depth": "0"})
+	if rec.Code != 207 {
+		t.Fatalf("PROPFIND 账号根无尾斜杠应为 207，实际 %d %s", rec.Code, rec.Body.String())
+	}
 	rec = request(s, "PROPFIND", "/app1/notes/", "app1", pass, nil, map[string]string{"Depth": "1"})
 	if rec.Code != 207 {
 		t.Fatalf("PROPFIND Depth:1 应为 207，实际 %d", rec.Code)

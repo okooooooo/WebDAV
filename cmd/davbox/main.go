@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	addr := flag.String("addr", "127.0.0.1:18900", "监听地址")
+	addr := flag.String("addr", "0.0.0.0:18900", "监听地址")
 	dataDir := flag.String("data", "./data", "数据目录")
 	flag.Parse()
 
@@ -61,7 +61,7 @@ func main() {
 		ReadHeaderTimeout: 15 * time.Second,
 	}
 
-	log.Printf("davbox 已启动，监听 http://%s，数据目录 %s", *addr, *dataDir)
+	log.Printf("davbox 已启动，监听 %s，数据目录 %s", *addr, *dataDir)
 	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("服务退出: %v", err)
 	}

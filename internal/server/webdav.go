@@ -67,6 +67,19 @@ func (s *Server) handleDAV(w http.ResponseWriter, r *http.Request, user string) 
 		return
 	}
 
+	// 官方 Handler 的 Prefix 是 /<user>/，路径 /<user>（无尾斜杠）对不上会 404。
+	// 许多客户端（含本仓库同步 App）对账号根发出 PROPFIND /<user>。
+	if r.URL.Path == "/"+user {
+		rr := r.Clone(r.Context())
+		u := *r.URL
+		u.Path = "/" + user + "/"
+		if u.RawPath != "" {
+			u.RawPath = "/" + user + "/"
+		}
+		rr.URL = &u
+		r = rr
+	}
+
 	h := &webdav.Handler{
 		Prefix:     "/" + user + "/",
 		FileSystem: s.davFSFor(acct),

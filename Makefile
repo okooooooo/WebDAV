@@ -1,5 +1,5 @@
 BIN  := davbox
-ADDR ?= 127.0.0.1:18900
+ADDR ?= 0.0.0.0:18900
 DATA ?= ./data
 
 .PHONY: build frontend run test vet clean
